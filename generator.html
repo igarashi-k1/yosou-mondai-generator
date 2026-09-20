@@ -1,0 +1,522 @@
+<title>予想問題ジェネレーター</title>
+<style>
+:root{
+  --bg:#f6f3ec; --surface:#ffffff; --surface-2:#eee9dc; --ink:#25302c; --ink-dim:#5b665f;
+  --line:#dcd5c3; --primary:#1f5c56; --primary-ink:#eef7f4; --accent:#d98c2b;
+  --good:#2f7d4f; --good-bg:#e4f3e8; --bad:#b5432f; --bad-bg:#fbe8e3;
+  --shadow: 0 10px 24px -14px rgba(31,92,86,.35);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161f1c; --surface:#1f2a26; --surface-2:#25322d; --ink:#eef2ee; --ink-dim:#a9b6ae;
+    --line:#33423b; --primary:#5fb3a4; --primary-ink:#0e1614; --accent:#e6a94c;
+    --good:#6fce93; --good-bg:#1c3a29; --bad:#e77f6a; --bad-bg:#3d2420;
+    --shadow: 0 10px 26px -14px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161f1c; --surface:#1f2a26; --surface-2:#25322d; --ink:#eef2ee; --ink-dim:#a9b6ae;
+  --line:#33423b; --primary:#5fb3a4; --primary-ink:#0e1614; --accent:#e6a94c;
+  --good:#6fce93; --good-bg:#1c3a29; --bad:#e77f6a; --bad-bg:#3d2420;
+  --shadow: 0 10px 26px -14px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans JP","Zen Kaku Gothic New",sans-serif;
+  padding-inline:16px; padding-block:28px; display:flex; justify-content:center;
+}
+.app{width:100%; max-width:640px; display:flex; flex-direction:column; gap:18px;}
+h1,h2,h3{font-family:"Kosugi Maru","Noto Sans JP",sans-serif; text-wrap:balance; margin:0;}
+
+.masthead{
+  display:flex; align-items:center; gap:14px; padding:18px 20px;
+  background:linear-gradient(135deg,var(--primary),#123f3a); color:var(--primary-ink);
+  border-radius:18px; box-shadow:var(--shadow);
+}
+.masthead .mark{
+  width:46px;height:46px;flex:0 0 auto; border-radius:12px; background:rgba(255,255,255,.14);
+  display:flex;align-items:center;justify-content:center; font-size:22px;
+}
+.masthead h1{font-size:18px; line-height:1.4;}
+.masthead p{margin:4px 0 0; font-size:12px; opacity:.85;}
+
+.card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:var(--shadow);}
+
+/* ---- setup screen ---- */
+.count-row{display:flex; gap:10px; margin-top:12px;}
+.count-btn{
+  flex:1; padding:14px 6px; border-radius:12px; border:2px solid var(--line);
+  background:var(--surface-2); color:var(--ink); font-family:"Kosugi Maru",sans-serif;
+  font-size:16px; cursor:pointer; text-align:center;
+}
+.count-btn.active{border-color:var(--primary); background:var(--good-bg); color:var(--primary); font-weight:700;}
+.count-btn:focus-visible{outline:2px solid var(--primary); outline-offset:2px;}
+
+.genre-legend{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}
+.genre-chip{font-size:11px; padding:4px 10px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line); color:var(--ink-dim);}
+
+.generate-btn{
+  margin-top:18px; width:100%; padding:16px; border:none; border-radius:14px;
+  background:linear-gradient(135deg,var(--accent),#c97a1c); color:#2a1b06; font-size:16px; font-weight:700;
+  font-family:"Kosugi Maru",sans-serif; cursor:pointer;
+}
+.generate-btn:active{transform:translateY(1px);}
+
+.offline-note{margin-top:12px; font-size:12px; color:var(--ink-dim); line-height:1.6; text-align:center;}
+
+/* ---- quiz screen ---- */
+.progress-wrap{display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink-dim);}
+.progress-bar{flex:1; height:8px; background:var(--surface-2); border-radius:99px; overflow:hidden;}
+.progress-fill{height:100%; background:var(--primary); border-radius:99px; transition:width .25s ease;}
+.tag{font-size:11px; letter-spacing:.04em; padding:3px 9px; border-radius:99px; background:var(--surface-2); color:var(--ink-dim); border:1px solid var(--line); display:inline-block; margin-top:10px;}
+
+.q-text{font-size:20px; line-height:1.75; margin-top:16px;}
+.q-romaji{font-size:13px; color:var(--ink-dim); margin-top:6px; font-style:italic;}
+
+.choice-row{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px;}
+.choice-btn{
+  appearance:none; cursor:pointer; font-family:"Kosugi Maru",sans-serif;
+  border-radius:16px; padding:20px 10px; font-size:28px; font-weight:700;
+  border:2px solid var(--line); background:var(--surface-2); color:var(--ink);
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+}
+.choice-btn .label{font-size:12px; font-family:"Noto Sans JP",sans-serif; font-weight:400; color:var(--ink-dim);}
+.choice-btn:hover:not(:disabled){border-color:var(--primary);}
+.choice-btn:focus-visible{outline:2px solid var(--primary); outline-offset:2px;}
+.choice-btn.maru{color:var(--primary);}
+.choice-btn.batsu{color:var(--bad);}
+.choice-btn.correct{background:var(--good-bg); border-color:var(--good); color:var(--good);}
+.choice-btn.wrong{background:var(--bad-bg); border-color:var(--bad); color:var(--bad);}
+.choice-btn.dim{opacity:.5;}
+
+.feedback{margin-top:16px; padding:14px 16px; border-radius:12px; font-size:14px; display:none; align-items:center; gap:10px;}
+.feedback.show{display:flex;}
+.feedback.good{background:var(--good-bg); color:var(--good);}
+.feedback.bad{background:var(--bad-bg); color:var(--bad);}
+
+.kaisetsu-box{margin-top:10px; padding:14px 16px; border-radius:12px; background:var(--surface-2); border:1px dashed var(--line); font-size:13px; line-height:1.7; display:none;}
+.kaisetsu-box.show{display:block;}
+.kaisetsu-box .head{font-family:"Kosugi Maru",sans-serif; font-size:12px; color:var(--accent); letter-spacing:.04em; margin-bottom:4px;}
+
+.next-btn{margin-top:16px; width:100%; padding:14px; border:none; border-radius:12px; background:var(--primary); color:var(--primary-ink); font-size:15px; font-weight:700; font-family:"Kosugi Maru",sans-serif; cursor:pointer; display:none;}
+.next-btn.show{display:block;}
+
+/* ---- result screen ---- */
+.score-hero{text-align:center; padding:26px 20px;}
+.score-num{font-family:"Kosugi Maru",sans-serif; font-size:52px; color:var(--primary); line-height:1; font-variant-numeric:tabular-nums;}
+.score-num span{font-size:22px; color:var(--ink-dim);}
+.score-msg{margin-top:8px; color:var(--ink-dim); font-size:14px;}
+
+.btn-row{display:flex; gap:10px; margin-top:18px;}
+.btn{flex:1; padding:13px; border-radius:12px; text-align:center; cursor:pointer; font-family:"Kosugi Maru",sans-serif; font-size:14px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink);}
+.btn.primary{background:var(--primary); color:var(--primary-ink); border:none;}
+
+footer{text-align:center; font-size:11px; color:var(--ink-dim); padding-bottom:10px; line-height:1.7;}
+[hidden]{display:none!important;}
+</style>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+
+<div class="app">
+  <div class="masthead">
+    <div class="mark">🎲</div>
+    <div>
+      <h1>ビルクリーニング基礎級 予想問題ジェネレーター</h1>
+      <p>スマホでもその場で自動生成。道具・洗剤・マナーの知識をランダムに組み合わせます</p>
+    </div>
+  </div>
+
+  <!-- ============ SETUP ============ -->
+  <section id="screen-setup" class="card">
+    <h2 style="font-size:16px;color:var(--ink-dim);font-weight:500;">もんだいすう を えらんでください</h2>
+    <div class="count-row" id="count-row"></div>
+    <div class="genre-legend">
+      <span class="genre-chip">🧹 どうぐ の もくてき</span>
+      <span class="genre-chip">🧴 せんざい の せいしつ</span>
+      <span class="genre-chip">🦺 まなー・あんぜん</span>
+    </div>
+    <button class="generate-btn" id="btn-generate">あたらしい 予想問題 を つくる</button>
+    <p class="offline-note">生成はすべてこの端末（ブラウザ）の中だけで行われます。インターネット接続やAIの呼び出しは行いません。実行のたびに新しい組み合わせになります。</p>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section id="screen-quiz" class="card" hidden>
+    <div class="progress-wrap">
+      <span id="progress-label">1 / 20</span>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <span id="score-label">◎ 0</span>
+    </div>
+    <span class="tag" id="q-genre-tag"></span>
+
+    <p class="q-text" id="q-text"></p>
+    <p class="q-romaji" id="q-romaji"></p>
+
+    <div class="choice-row">
+      <button class="choice-btn maru" id="btn-maru"><span>○</span><span class="label">ただしい</span></button>
+      <button class="choice-btn batsu" id="btn-batsu"><span>×</span><span class="label">あやまり</span></button>
+    </div>
+
+    <div class="feedback" id="feedback">
+      <span id="feedback-text"></span>
+    </div>
+    <div class="kaisetsu-box" id="kaisetsu-box">
+      <div class="head">かいせつ Kaisetsu</div>
+      <p id="kaisetsu-text" style="margin:0;"></p>
+    </div>
+
+    <button class="next-btn" id="btn-next">つぎへ　Tsugi e →</button>
+  </section>
+
+  <!-- ============ RESULT ============ -->
+  <section id="screen-result" class="card" hidden>
+    <div class="score-hero">
+      <h2 style="font-size:14px;color:var(--ink-dim);font-weight:500;">けっか (Kekka)</h2>
+      <div class="score-num"><span id="result-correct">0</span><span>/<span id="result-total">20</span></span></div>
+      <p class="score-msg" id="result-msg"></p>
+    </div>
+    <div class="btn-row">
+      <div class="btn" id="btn-same">おなじ もんだい を もういちど</div>
+      <div class="btn primary" id="btn-new">あたらしい もんだい を つくる</div>
+    </div>
+  </section>
+
+  <footer>この予想問題はAIが作成したオリジナル問題です。公式の検定試験の内容を保証するものではありません。<br>PC版のオフラインツール（Python版）も同じロジックで動作します。</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   かな -> ローマじ へんかん（かんいHepburn。ー は "-" で ひょうげん）
+   ============================================================ */
+var COMBO_MAP = {
+  "きゃ":"kya","きゅ":"kyu","きょ":"kyo","ぎゃ":"gya","ぎゅ":"gyu","ぎょ":"gyo",
+  "しゃ":"sha","しゅ":"shu","しょ":"sho","じゃ":"ja","じゅ":"ju","じょ":"jo",
+  "ちゃ":"cha","ちゅ":"chu","ちょ":"cho","にゃ":"nya","にゅ":"nyu","にょ":"nyo",
+  "ひゃ":"hya","ひゅ":"hyu","ひょ":"hyo","びゃ":"bya","びゅ":"byu","びょ":"byo",
+  "ぴゃ":"pya","ぴゅ":"pyu","ぴょ":"pyo","みゃ":"mya","みゅ":"myu","みょ":"myo",
+  "りゃ":"rya","りゅ":"ryu","りょ":"ryo",
+  "ふぃ":"fi","うぃ":"wi","てぃ":"ti","でぃ":"di"
+};
+var SINGLE_MAP = {
+  "あ":"a","い":"i","う":"u","え":"e","お":"o",
+  "か":"ka","き":"ki","く":"ku","け":"ke","こ":"ko",
+  "が":"ga","ぎ":"gi","ぐ":"gu","げ":"ge","ご":"go",
+  "さ":"sa","し":"shi","す":"su","せ":"se","そ":"so",
+  "ざ":"za","じ":"ji","ず":"zu","ぜ":"ze","ぞ":"zo",
+  "た":"ta","ち":"chi","つ":"tsu","て":"te","と":"to",
+  "だ":"da","ぢ":"ji","づ":"zu","で":"de","ど":"do",
+  "な":"na","に":"ni","ぬ":"nu","ね":"ne","の":"no",
+  "は":"ha","ひ":"hi","ふ":"fu","へ":"he","ほ":"ho",
+  "ば":"ba","び":"bi","ぶ":"bu","べ":"be","ぼ":"bo",
+  "ぱ":"pa","ぴ":"pi","ぷ":"pu","ぺ":"pe","ぽ":"po",
+  "ま":"ma","み":"mi","む":"mu","め":"me","も":"mo",
+  "や":"ya","ゆ":"yu","よ":"yo",
+  "ら":"ra","り":"ri","る":"ru","れ":"re","ろ":"ro",
+  "わ":"wa","を":"wo",
+  "ゃ":"ya","ゅ":"yu","ょ":"yo","ぁ":"a","ぃ":"i","ぅ":"u","ぇ":"e","ぉ":"o"
+};
+
+function kanaToRomaji(word){
+  var i = 0, n = word.length, result = "", pendingSokuon = false;
+  while(i < n){
+    var ch = word[i];
+    if(ch === "ー"){ result += "-"; i++; continue; }
+    if(ch === "っ"){ pendingSokuon = true; i++; continue; }
+    var two = word.substr(i,2);
+    var syll;
+    if(COMBO_MAP[two] !== undefined){ syll = COMBO_MAP[two]; i += 2; }
+    else if(SINGLE_MAP[ch] !== undefined){ syll = SINGLE_MAP[ch]; i += 1; }
+    else if(ch === "ん"){
+      var nextSyll = "";
+      if(i+1 < n){
+        var two2 = word.substr(i+1,2);
+        if(COMBO_MAP[two2] !== undefined) nextSyll = COMBO_MAP[two2];
+        else if(SINGLE_MAP[word[i+1]] !== undefined) nextSyll = SINGLE_MAP[word[i+1]];
+      }
+      if(nextSyll && "aiueoy".indexOf(nextSyll[0]) !== -1) result += "n'";
+      else result += "n";
+      i++; continue;
+    } else {
+      result += ch; i++; continue;
+    }
+    if(pendingSokuon){
+      syll = (syll.indexOf("ch") === 0) ? ("t"+syll) : (syll[0]+syll);
+      pendingSokuon = false;
+    }
+    result += syll;
+  }
+  return result;
+}
+
+function sentenceToRomaji(hira){
+  var normalized = hira.split("、").join("、 ").split("。").join("。 ");
+  var tokens = normalized.split(" ").filter(function(t){ return t !== ""; });
+  var out = [];
+  tokens.forEach(function(tok, idx){
+    var trailing = "", core = tok;
+    while(core.length && (core[core.length-1] === "。" || core[core.length-1] === "、")){
+      trailing = core[core.length-1] + trailing;
+      core = core.slice(0, -1);
+    }
+    trailing = trailing.split("。").join(".").split("、").join(",");
+    var romaji;
+    if(core === "は") romaji = "wa";
+    else if(core === "へ") romaji = "e";
+    else if(core === "を") romaji = "wo";
+    else romaji = kanaToRomaji(core);
+    if(idx === 0 && romaji) romaji = romaji[0].toUpperCase() + romaji.slice(1);
+    out.push(romaji + trailing);
+  });
+  return out.join(" ");
+}
+
+/* ============================================================
+   ちしきベース
+   ============================================================ */
+var TOOLS = [
+  ["じざいぼうき","ゆか の ごみ を はく"],
+  ["かんしき もっぷ","ゆか の ほこり を とる"],
+  ["しっしき もっぷ","ゆか を みずぶき する"],
+  ["ふろあー すくいじー","ゆか の みず を あつめる"],
+  ["ういんど すくいじー","まどがらす の みず を きる"],
+  ["ぱてないふ","こびりついた よごれ を こそげとる"],
+  ["けかき","ほうき の け に からまった かみのけ や ほこり を て を つかわずに とりのぞく"],
+  ["だすと こんとろーる","みず を つかわずに ほこり を とる"],
+  ["ふろあー ぽりっしゃー","ゆか を みがく"],
+  ["そうじき","ごみ や ほこり を すいとる"],
+  ["ぶんかちりとり","はきあつめた ごみ を いれる"],
+  ["でっきぶらし","ゆか の がんこな よごれ を こする"],
+  ["だいしゃ","たいりょう の ごみ を はこぶ"],
+  ["きゃたつ","たかい ばしょ の さぎょう を する"],
+  ["ごむてぶくろ","て を まもりながら せんざい を つかう"],
+  ["あんぜんくつ","すべりにくく して てんとう を ふせぐ"]
+];
+
+var DETERGENT_TYPES = ["さんせい","あるかりせい","ちゅうせい"];
+var DIRTS = [
+  ["べんき の にょうせき","さんせい"],
+  ["ゆか の あぶら よごれ","あるかりせい"],
+  ["まいにち の かるい よごれ","ちゅうせい"],
+  ["りのりうむ ゆか の にちじょう そうじ","ちゅうせい"],
+  ["すてんれす の みずあか","さんせい"],
+  ["ちゅうぼう の あぶら よごれ","あるかりせい"],
+  ["かがみ の みずあか","さんせい"],
+  ["ゆか の わっくす かす","あるかりせい"]
+];
+
+var STATIC_FACTS = [
+  ["さぎょう を はじめる まえ に、みだしなみ を かくにんする。","さぎょう を はじめる まえ でも、みだしなみ は きにしなくて よい。","せいけつな みだしなみ は、りようしゃ に あんしんかん を あたえる たいせつな まなーです。"],
+  ["せんざい を つかう とき は、せいひん の ひょうじ を よく よんでから つかう。","せんざい は ひょうじ を よまずに つかっても もんだいない。","せんざい には つかいかた や ちゅういてん が きさいされている ため、かならず ひょうじ を かくにんします。"],
+  ["ごむてぶくろ は て を ほごする ため に つかう。","ごむてぶくろ は さぎょう を はやく する ため に つかう。","ごむてぶくろ の もくてき は、せんざい や よごれ から て を まもる こと です。"],
+  ["こうたいじかん が きたら、つぎ の ひと に さぎょう の じょうきょう を つたえる。","こうたいじかん が きても、つぎ の ひと に なにも つたえなくて よい。","さぎょう の ひきつぎ を きちんと おこなう こと で、せいそう の ぬけ を ふせぎます。"],
+  ["ふるい せんざい や やくざい は、きめられた ほうほう で はいきする。","ふるい せんざい や やくざい は、どんな ほうほう で すてても よい。","やくざい の しゅるい に よって はいきほうほう が きめられている ため、かってに すてては いけません。"],
+  ["えれべーたー の せいそうちゅう は、あんぜんに りようできるよう ひょうじ を だす。","えれべーたー の せいそうちゅう は、なにも ひょうじしなくて よい。","りようしゃ が あんぜんに とおれるよう、さぎょうちゅう の ひょうじ が ひつようです。"],
+  ["みず を つかう さぎょう で は、すべりにくい くつ を えらぶ こと が たいせつ で ある。","みず を つかう さぎょう で も、どんな くつ でも かまわない。","みず で ぬれた ゆか は すべりやすい ため、あんぜんな くつ を えらびます。"],
+  ["せいそうようざい の ほかんばしょ は、こども が さわれない ところ に する。","せいそうようざい は どこ に おいても かまわない。","やくひん は あんぜん の ため、て の とどかない ばしょ に ほかんします。"],
+  ["きゅうな こしょう を みつけたら、かかり の ひと に ほうこくする。","きゅうな こしょう を みつけても、じぶん で しゅうりすれば よい。","せんもんがい の しゅうり は じこ の げんいん に なる ため、かかり の ひと に ほうこくします。"],
+  ["ゆか を みがく まえ に、こまかい ごみ を とりのぞく。","ゆか を みがく まえ でも、ごみ が あって もんだいない。","ごみ が のこった まま みがくと、ゆか に きず が つく こと が あります。"],
+  ["においの きつい やくざい を つかう とき は、かんき に き を つける。","においの きつい やくざい で も、かんき は きにしなくて よい。","かんき を おこなわないと、たいちょう を くずす げんいん に なります。"],
+  ["せいそう の さぎょうちゅう は、りようしゃ の つうこう を さまたげないように する。","せいそう の さぎょうちゅう は、りようしゃ の つうこう は きにしなくて よい。","りようしゃ の あんぜん と べんりせい を かんがえて さぎょうする こと が たいせつです。"],
+  ["かび は しっけ の おおい ばしょ に はっせいしやすい。","かび は かんそうした ばしょ に はっせいしやすい。","かび は しっけ と よごれ の おおい ばしょ で そだちやすい ため、かんき と せいそう が たいせつです。"],
+  ["せいそう の けいかくひょう を つくる こと で、さぎょう の ぬけ を ふせげる。","せいそう の けいかくひょう は つくらなくても よい。","けいかくひょう が ある こと で、どこ を いつ そうじする か が めいかく に なります。"],
+  ["びひん は なくなる まえ に ほじゅうする。","びひん は なくなってから ほじゅうすれば よい。","りようしゃ が こまらないよう、びひん は なくなる まえ に ほじゅうします。"],
+  ["がらすそうじ の あと は、ふきむら が ないか かくにんする。","がらすそうじ の あと は、かくにんしなくても よい。","ふきむら が のこっていないか さいご に かくにんする こと で、しあがり が よくなります。"],
+  ["せいそうどうぐ は しゅるいごとに せいりして ほかんする。","せいそうどうぐ は どこ に おいても よい。","どうぐ を せいりして ほかんする こと で、つぎ に つかう とき すぐ みつけられます。"],
+  ["かいだん の てすり も せいそう の たいしょう に なる。","かいだん の てすり は そうじしなくて よい。","てすり は おおくの ひと が さわる ばしょ なので、えいせい の ため せいそうします。"],
+  ["えあこん の ふぃるたー に は ほこり が たまりやすい。","えあこん の ふぃるたー に は ほこり が たまらない。","ふぃるたー に ほこり が たまると、くうき の ながれ が わるくなり こうりつ が さがります。"],
+  ["ゆか に わっくす を ぬる とき は、うすく きんいつ に ぬる。","ゆか に わっくす を ぬる とき は、あつく いちぶ だけ に ぬる。","あつぬり や むらぬり は、しあがり が わるくなる げんいん に なります。"],
+  ["せいそう の しごと で は、じかん を まもって こうどうする。","せいそう の しごと で は、じかん は きにしなくて よい。","じかんげんしゅ は、しごと に たいする しんらい に つながる たいせつな しゅうかんです。"],
+  ["がらす の われめ を みつけたら、かかり の ひと に ほうこくする。","がらす の われめ を みつけても、そのまま に しておく。","われた がらす は きけんな ので、みつけたら すぐ に ほうこくします。"],
+  ["せんざい や やくざい は、しようきげん を かくにんしてから つかう。","せんざい や やくざい は、しようきげん を きにしなくて よい。","きげんぎれ の せんざい は こうか が おちたり、ひんしつ が かわったり する こと が あります。"],
+  ["さぎょうちゅう に おおきな おと を たてないよう ちゅういする。","さぎょうちゅう は おおきな おと を たてても かまわない。","りようしゃ の めいわく に ならないよう、しずかに さぎょうする こと が もとめられます。"],
+  ["ぬれた ゆか に は、すべりどめ の かんばん を おく。","ぬれた ゆか に は なにも おかなくて よい。","てんとうじこ を ふせぐ ため に、ちゅうい かんばん を たてます。"],
+  ["せいそう の あと は、つかった せんざい の りょう を かくにんする。","せいそう の あと は、せんざい の りょう を かくにんしなくて よい。","せんざい の ほじゅう や かんり の ため に、つかった りょう を はあくして おきます。"],
+  ["しごとちゅう に たいちょう が わるく なったら、むりせず やすむ。","しごとちゅう に たいちょう が わるくても、さいごまで がまんして つづける。","むり を すると じこ や びょうき の げんいん に なる ため、たいちょう が わるい とき は やすみます。"],
+  ["せいそう の ぷろ は、みえない ばしょ も ていねいに そうじする。","せいそう の ぷろ は、みえる ばしょ だけ そうじすれば よい。","みえない ばしょ まで ていねいに そうじする こと が、ぷろ として の しごと の しつ を たかめます。"],
+  ["といれっとぺーぱー など の びひん は、きれた とき すぐ わかるよう かくにんする。","といれっとぺーぱー など の びひん は、きれても きにしなくて よい。","りようしゃ が こまらないよう、びひん の のこり を こまめに かくにんします。"],
+  ["せんざい の ぼとる に は、なかみ が わかるよう ひょうじ を する。","せんざい の ぼとる に は、なかみ が わからなくても よい。","ひょうじ が ないと まちがえて つかう きけん が ある ため、かならず なかみ を ひょうじします。"]
+];
+
+function shuffle(arr){
+  var a = arr.slice();
+  for(var i=a.length-1;i>0;i--){
+    var j = Math.floor(Math.random()*(i+1));
+    var t=a[i]; a[i]=a[j]; a[j]=t;
+  }
+  return a;
+}
+function makeCycle(items){
+  var pool = shuffle(items), idx = 0;
+  return function(){
+    if(idx >= pool.length){ pool = shuffle(items); idx = 0; }
+    return pool[idx++];
+  };
+}
+
+function buildToolQuestion(nextTool){
+  var pair = nextTool(), tool = pair[0], purpose = pair[1];
+  var isTrue = Math.random() < 0.5;
+  var chosenPurpose = purpose;
+  if(!isTrue){
+    var others = TOOLS.filter(function(t){ return t[0] !== tool; }).map(function(t){ return t[1]; });
+    chosenPurpose = others[Math.floor(Math.random()*others.length)];
+  }
+  var text = tool + " は " + chosenPurpose + " どうぐ で ある。";
+  var kaisetsu = tool + " は「" + purpose + "」ための どうぐです。";
+  return {text:text, romaji:sentenceToRomaji(text), answer:isTrue, kaisetsu:kaisetsu, genre:"🧹 どうぐ"};
+}
+function buildDetergentQuestion(nextDirt){
+  var pair = nextDirt(), dirt = pair[0], correctType = pair[1];
+  var isTrue = Math.random() < 0.5;
+  var chosenType = correctType;
+  if(!isTrue){
+    var others = DETERGENT_TYPES.filter(function(t){ return t !== correctType; });
+    chosenType = others[Math.floor(Math.random()*others.length)];
+  }
+  var text = dirt + " は " + chosenType + " の せんざい で おとす。";
+  var kaisetsu = dirt + " は " + correctType + " の せんざい で おとします。";
+  return {text:text, romaji:sentenceToRomaji(text), answer:isTrue, kaisetsu:kaisetsu, genre:"🧴 せんざい"};
+}
+function buildStaticQuestion(nextFact){
+  var fact = nextFact();
+  var isTrue = Math.random() < 0.5;
+  var text = isTrue ? fact[0] : fact[1];
+  return {text:text, romaji:sentenceToRomaji(text), answer:isTrue, kaisetsu:fact[2], genre:"🦺 まなー・あんぜん"};
+}
+
+function generateQuestions(count){
+  var nextFact = makeCycle(STATIC_FACTS);
+  var nextTool = makeCycle(TOOLS);
+  var nextDirt = makeCycle(DIRTS);
+  var out = [];
+  for(var i=0;i<count;i++){
+    var roll = Math.random(), q;
+    if(roll < 0.45) q = buildStaticQuestion(nextFact);
+    else if(roll < 0.75) q = buildToolQuestion(nextTool);
+    else q = buildDetergentQuestion(nextDirt);
+    out.push(q);
+  }
+  return out;
+}
+
+/* ============================================================
+   UI
+   ============================================================ */
+function byId(id){ return document.getElementById(id); }
+
+var COUNT_OPTIONS = [10, 20, 30];
+var state = { count:20, questions:[], pos:0, correct:0, answered:false };
+
+function loadLastCount(){
+  try{
+    var v = localStorage.getItem("ym_count");
+    return v ? parseInt(v,10) : 20;
+  }catch(e){ return 20; }
+}
+function saveLastCount(c){
+  try{ localStorage.setItem("ym_count", String(c)); }catch(e){}
+}
+
+function buildCountRow(){
+  state.count = loadLastCount();
+  var row = byId("count-row");
+  row.innerHTML = "";
+  COUNT_OPTIONS.forEach(function(c){
+    var b = document.createElement("button");
+    b.className = "count-btn" + (c === state.count ? " active" : "");
+    b.textContent = c + "問";
+    b.addEventListener("click", function(){
+      state.count = c;
+      saveLastCount(c);
+      row.querySelectorAll(".count-btn").forEach(function(x){ x.classList.remove("active"); });
+      b.classList.add("active");
+    });
+    row.appendChild(b);
+  });
+}
+
+function showScreen(id){
+  ["screen-setup","screen-quiz","screen-result"].forEach(function(s){
+    byId(s).hidden = (s !== id);
+  });
+}
+
+function startQuiz(){
+  state.questions = generateQuestions(state.count);
+  state.pos = 0;
+  state.correct = 0;
+  showScreen("screen-quiz");
+  renderQuestion();
+}
+
+function renderQuestion(){
+  var q = state.questions[state.pos];
+  byId("progress-label").textContent = (state.pos+1) + " / " + state.questions.length;
+  byId("progress-fill").style.width = (state.pos/state.questions.length*100) + "%";
+  byId("score-label").textContent = "◎ " + state.correct;
+  byId("q-genre-tag").textContent = q.genre;
+  byId("q-text").textContent = q.text;
+  byId("q-romaji").textContent = q.romaji;
+
+  var maru = byId("btn-maru"), batsu = byId("btn-batsu");
+  [maru,batsu].forEach(function(b){ b.disabled=false; b.classList.remove("correct","wrong","dim"); });
+  byId("feedback").classList.remove("show","good","bad");
+  byId("kaisetsu-box").classList.remove("show");
+  byId("btn-next").classList.remove("show");
+  state.answered = false;
+}
+
+function answer(choice){
+  if(state.answered) return;
+  state.answered = true;
+  var q = state.questions[state.pos];
+  var isCorrect = (choice === q.answer);
+  var maru = byId("btn-maru"), batsu = byId("btn-batsu");
+  var chosen = choice ? maru : batsu, other = choice ? batsu : maru;
+  if(isCorrect){ chosen.classList.add("correct"); state.correct++; }
+  else{ chosen.classList.add("wrong"); (q.answer?maru:batsu).classList.add("correct"); other.classList.add("dim"); }
+  maru.disabled = true; batsu.disabled = true;
+
+  var fb = byId("feedback");
+  fb.classList.add("show", isCorrect?"good":"bad");
+  byId("feedback-text").textContent = (isCorrect ? "せいかい！ " : "ざんねん… ") + "こたえ: " + (q.answer ? "○ ただしい" : "× あやまり");
+  byId("kaisetsu-text").textContent = q.kaisetsu;
+  byId("kaisetsu-box").classList.add("show");
+  byId("score-label").textContent = "◎ " + state.correct;
+  byId("progress-fill").style.width = ((state.pos+1)/state.questions.length*100) + "%";
+  byId("btn-next").classList.add("show");
+}
+
+function nextQuestion(){
+  state.pos++;
+  if(state.pos >= state.questions.length){ showResult(); }
+  else{ renderQuestion(); }
+}
+
+function showResult(){
+  showScreen("screen-result");
+  byId("result-correct").textContent = state.correct;
+  byId("result-total").textContent = state.questions.length;
+  var pct = Math.round(state.correct/state.questions.length*100);
+  var msg = pct===100 ? "パーフェクト！ すばらしい！" : pct>=80 ? "よく できました！" : pct>=60 ? "もう すこし！ がんばって！" : "もういちど 練習しましょう。";
+  byId("result-msg").textContent = msg;
+}
+
+byId("btn-maru").addEventListener("click", function(){ answer(true); });
+byId("btn-batsu").addEventListener("click", function(){ answer(false); });
+byId("btn-next").addEventListener("click", nextQuestion);
+byId("btn-generate").addEventListener("click", startQuiz);
+byId("btn-new").addEventListener("click", function(){ showScreen("screen-setup"); });
+byId("btn-same").addEventListener("click", function(){
+  state.pos = 0; state.correct = 0;
+  showScreen("screen-quiz");
+  renderQuestion();
+});
+
+buildCountRow();
+showScreen("screen-setup");
+})();
+</script>
