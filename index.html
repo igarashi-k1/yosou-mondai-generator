@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>予想問題ジェネレーター</title>
 <style>
 :root{
@@ -21,10 +26,12 @@
   --shadow: 0 10px 26px -14px rgba(0,0,0,.55);
 }
 *{box-sizing:border-box;}
+html,body{margin:0; padding:0;}
 body{
   background:var(--bg); color:var(--ink);
   font-family:"Noto Sans JP","Zen Kaku Gothic New",sans-serif;
   padding-inline:16px; padding-block:28px; display:flex; justify-content:center;
+  min-height:100vh;
 }
 .app{width:100%; max-width:640px; display:flex; flex-direction:column; gap:18px;}
 h1,h2,h3{font-family:"Kosugi Maru","Noto Sans JP",sans-serif; text-wrap:balance; margin:0;}
@@ -117,6 +124,8 @@ footer{text-align:center; font-size:11px; color:var(--ink-dim); padding-bottom:1
 </style>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
 
 <div class="app">
   <div class="masthead">
@@ -520,3 +529,5 @@ buildCountRow();
 showScreen("screen-setup");
 })();
 </script>
+</body>
+</html>
