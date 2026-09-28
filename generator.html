@@ -97,7 +97,12 @@ h1,h2,h3{font-family:"Kosugi Maru","Noto Sans JP",sans-serif; text-wrap:balance;
 .choice-btn.wrong{background:var(--bad-bg); border-color:var(--bad); color:var(--bad);}
 .choice-btn.dim{opacity:.5;}
 
-.feedback{margin-top:16px; padding:14px 16px; border-radius:12px; font-size:14px; display:none; align-items:center; gap:10px;}
+.mascot-wrap{display:none; justify-content:center; margin-top:16px;}
+.mascot-wrap.show{display:flex; animation:mascotPop .45s cubic-bezier(.34,1.56,.64,1);}
+@keyframes mascotPop{from{transform:scale(.4) translateY(6px); opacity:0;} to{transform:scale(1) translateY(0); opacity:1;}}
+@media (prefers-reduced-motion: reduce){ .mascot-wrap.show{animation:none;} }
+
+.feedback{margin-top:12px; padding:14px 16px; border-radius:12px; font-size:14px; display:none; align-items:center; gap:10px; justify-content:center; text-align:center;}
 .feedback.show{display:flex;}
 .feedback.good{background:var(--good-bg); color:var(--good);}
 .feedback.bad{background:var(--bad-bg); color:var(--bad);}
@@ -166,6 +171,7 @@ footer{text-align:center; font-size:11px; color:var(--ink-dim); padding-bottom:1
       <button class="choice-btn batsu" id="btn-batsu"><span>×</span><span class="label">あやまり</span></button>
     </div>
 
+    <div class="mascot-wrap" id="mascot-wrap"></div>
     <div class="feedback" id="feedback">
       <span id="feedback-text"></span>
     </div>
@@ -412,6 +418,57 @@ function generateQuestions(count){
 }
 
 /* ============================================================
+   マスコット（せいかい／ざんねん の イラスト）
+   ============================================================ */
+var MASCOT_HAPPY = '\
+<svg viewBox="0 0 100 110" width="76" height="84" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="よろこぶ マスコット">\
+  <path d="M14 16 l2.6 6 6 2.6 -6 2.6 -2.6 6 -2.6-6-6-2.6 6-2.6z" fill="#f2c14e"/>\
+  <path d="M84 10 l2 4.6 4.6 2 -4.6 2 -2 4.6 -2-4.6-4.6-2 4.6-2z" fill="#f2c14e"/>\
+  <path d="M90 42 l1.5 3.4 3.4 1.5 -3.4 1.5 -1.5 3.4 -1.5-3.4-3.4-1.5 3.4-1.5z" fill="#f2c14e"/>\
+  <ellipse cx="14" cy="58" rx="8" ry="15" fill="#6fcab8" transform="rotate(-40 14 58)"/>\
+  <ellipse cx="86" cy="58" rx="8" ry="15" fill="#6fcab8" transform="rotate(40 86 58)"/>\
+  <circle cx="50" cy="62" r="34" fill="#7fd9c4"/>\
+  <ellipse cx="37" cy="47" rx="8" ry="11" fill="#ffffff" opacity="0.45" transform="rotate(-20 37 47)"/>\
+  <ellipse cx="30" cy="70" rx="6" ry="4" fill="#ffb2c0" opacity="0.85"/>\
+  <ellipse cx="70" cy="70" rx="6" ry="4" fill="#ffb2c0" opacity="0.85"/>\
+  <circle cx="38" cy="58" r="6" fill="#26332f"/>\
+  <circle cx="62" cy="58" r="6" fill="#26332f"/>\
+  <circle cx="40.2" cy="55.5" r="1.8" fill="#ffffff"/>\
+  <circle cx="64.2" cy="55.5" r="1.8" fill="#ffffff"/>\
+  <path d="M39 72 Q50 86 61 72 Q50 80 39 72 Z" fill="#26332f"/>\
+</svg>';
+
+var MASCOT_SAD = '\
+<svg viewBox="0 0 100 110" width="76" height="84" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="しょんぼり する マスコット">\
+  <ellipse cx="50" cy="13" rx="17" ry="8" fill="#c9cfd6"/>\
+  <ellipse cx="37" cy="16" rx="10" ry="6" fill="#c9cfd6"/>\
+  <ellipse cx="63" cy="16" rx="10" ry="6" fill="#c9cfd6"/>\
+  <path d="M41 25 l-3 7" stroke="#8fb6d9" stroke-width="2.4" stroke-linecap="round"/>\
+  <path d="M59 25 l-3 7" stroke="#8fb6d9" stroke-width="2.4" stroke-linecap="round"/>\
+  <ellipse cx="16" cy="73" rx="8" ry="15" fill="#f3ab9a" transform="rotate(24 16 73)"/>\
+  <ellipse cx="84" cy="73" rx="8" ry="15" fill="#f3ab9a" transform="rotate(-24 84 73)"/>\
+  <circle cx="50" cy="65" r="34" fill="#f6bcae"/>\
+  <ellipse cx="37" cy="50" rx="8" ry="11" fill="#ffffff" opacity="0.4" transform="rotate(-20 37 50)"/>\
+  <path d="M77 46 q4.5 6.4 0 10.4 q-4.5-4 0-10.4z" fill="#8fc7e8"/>\
+  <path d="M31 56 Q38 50 45 56" stroke="#26332f" stroke-width="3" fill="none" stroke-linecap="round"/>\
+  <path d="M55 56 Q62 50 69 56" stroke="#26332f" stroke-width="3" fill="none" stroke-linecap="round"/>\
+  <path d="M35.5 60 q3.4 6.4 0 10.4 q-3.4-4 0-10.4z" fill="#8fc7e8"/>\
+  <path d="M64.5 60 q3.4 6.4 0 10.4 q-3.4-4 0-10.4z" fill="#8fc7e8"/>\
+  <path d="M40 80 q5 -6 10 0 q5 -6 10 0" stroke="#26332f" stroke-width="3" fill="none" stroke-linecap="round"/>\
+</svg>';
+
+function showMascot(isCorrect){
+  var wrap = byId("mascot-wrap");
+  wrap.innerHTML = isCorrect ? MASCOT_HAPPY : MASCOT_SAD;
+  wrap.classList.add("show");
+}
+function hideMascot(){
+  var wrap = byId("mascot-wrap");
+  wrap.classList.remove("show");
+  wrap.innerHTML = "";
+}
+
+/* ============================================================
    UI
    ============================================================ */
 function byId(id){ return document.getElementById(id); }
@@ -472,6 +529,7 @@ function renderQuestion(){
 
   var maru = byId("btn-maru"), batsu = byId("btn-batsu");
   [maru,batsu].forEach(function(b){ b.disabled=false; b.classList.remove("correct","wrong","dim"); });
+  hideMascot();
   byId("feedback").classList.remove("show","good","bad");
   byId("kaisetsu-box").classList.remove("show");
   byId("btn-next").classList.remove("show");
@@ -489,6 +547,7 @@ function answer(choice){
   else{ chosen.classList.add("wrong"); (q.answer?maru:batsu).classList.add("correct"); other.classList.add("dim"); }
   maru.disabled = true; batsu.disabled = true;
 
+  showMascot(isCorrect);
   var fb = byId("feedback");
   fb.classList.add("show", isCorrect?"good":"bad");
   byId("feedback-text").textContent = (isCorrect ? "せいかい！ " : "ざんねん… ") + "こたえ: " + (q.answer ? "○ ただしい" : "× あやまり");
